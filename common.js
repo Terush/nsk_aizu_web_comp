@@ -231,3 +231,95 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
     head.insertAdjacentHTML('beforeend', faviconTags);
 });
+
+/* -------------------------------------------------------
+   microCMS 連携処理
+------------------------------------------------------- */
+document.addEventListener("DOMContentLoaded", () => {
+    
+    // ▼▼▼ 設定エリア ▼▼▼
+    const SERVICE_DOMAIN = "s1260097"; 
+    const API_KEY = "wmJ9w2bf00HbvmHmWBwUpTa63v4c7v1kzvJG"; 
+    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+    // ---------------------------------------------------
+    // 1. ニュース一覧ページ用 (news.html)
+    // ---------------------------------------------------
+    const newsContainer = document.getElementById('js-news-list');
+    
+    if (newsContainer) {
+        // 全件取得 (件数制限なし)
+        const API_ENDPOINT = `https://${SERVICE_DOMAIN}.microcms.io/api/v1/news?orders=-date`;
+
+        fetch(API_ENDPOINT, {
+            headers: { "X-MICROCMS-API-KEY": API_KEY }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.contents.length === 0) {
+                newsContainer.innerHTML = '<p style="color:#ccc; text-align:center;">お知らせはありません。</p>';
+                return;
+            }
+            let html = "";
+            data.contents.forEach(article => {
+                const date = new Date(article.date);
+                const formattedDate = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+                const descHtml = article.description ? `<p class="news-archive-desc">${article.description}</p>` : "";
+
+                html += `
+                    <article class="news-archive-item">
+                        <time class="news-archive-date">${formattedDate}</time>
+                        <h3 class="news-archive-title">${article.title}</h3>
+                        ${descHtml}
+                    </article>
+                `;
+            });
+            newsContainer.innerHTML = html;
+        })
+        .catch(error => {
+            console.error(error);
+            newsContainer.innerHTML = '<p style="color:red; text-align:center;">読み込み失敗</p>';
+        });
+    }
+
+    // ---------------------------------------------------
+    // 2. トップページ用 (index.html)
+    // ---------------------------------------------------
+    const homeNewsContainer = document.getElementById('js-news-list-home');
+
+    if (homeNewsContainer) {
+        // ★ポイント： limit=2 をつけて「最新2件」だけ取得
+        const API_ENDPOINT_HOME = `https://${SERVICE_DOMAIN}.microcms.io/api/v1/news?orders=-date&limit=2`;
+
+        fetch(API_ENDPOINT_HOME, {
+            headers: { "X-MICROCMS-API-KEY": API_KEY }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.contents.length === 0) {
+                homeNewsContainer.innerHTML = '<li style="color:#ccc;">お知らせはありません</li>';
+                return;
+            }
+            let html = "";
+            data.contents.forEach(article => {
+                const date = new Date(article.date);
+                // 英語ページなら "Nov 25, 2025" のように表示を変えるなどの工夫も可能ですが
+                // ここではシンプルに "YYYY/MM/DD" に統一します
+                const formattedDate = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+
+                // index.html用のHTML構造 (liタグ) で生成
+                html += `
+                    <li class="news-item">
+                        <time class="news-date">${formattedDate}</time>
+                        <p class="news-title">${article.title}</p>
+                    </li>
+                `;
+            });
+            homeNewsContainer.innerHTML = html;
+        })
+        .catch(error => {
+            console.error(error);
+            homeNewsContainer.innerHTML = '<li style="color:red;">読み込み失敗</li>';
+        });
+    }
+});
